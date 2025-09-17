@@ -1,0 +1,12 @@
+version: 2
+
+sources:
+  - name: raw
+    database: MY_WH
+    schema: raw
+    tables:
+      - name: restaurant_inspection
+      - name: rat_inspection
+  
+ 
+

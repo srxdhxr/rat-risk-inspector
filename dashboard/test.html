@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Health Inspector</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            color: #1a1a1a;
+            line-height: 1.5;
+            background: #fafafa;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        /* Search */
+        .search {
+            position: relative;
+            max-width: 500px;
+            margin: 0 auto 3rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            border: 2px solid #e5e5e5;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: white;
+            transition: border-color 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+
+        .search-input::placeholder {
+            color: #999;
+        }
+
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            margin-top: 4px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+
+        .search-item {
+            padding: 1rem;
+            border-bottom: 1px solid #f5f5f5;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .search-item:hover {
+            background: #f9f9f9;
+        }
+
+        .search-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-info h3 {
+            font-size: 0.95rem;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .search-info p {
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .search-score {
+            font-size: 0.8rem;
+            font-weight: 500;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            white-space: nowrap;
+        }
+
+        .score-good {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .score-fair {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .score-poor {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Main Content */
+        .main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 1.5rem 1.5rem 0;
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        .card-header h2 {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .badge {
+            font-size: 0.75rem;
+            font-weight: 500;
+            padding: 0.25rem 0.6rem;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-a {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-b {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-c {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-active {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-inactive {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .card-content {
+            padding: 1.5rem;
+        }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .metric-value {
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        .trend {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            background: #f9f9f9;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .trend-up {
+            color: #dc2626;
+        }
+
+        .trend-down {
+            color: #16a34a;
+        }
+
+        .trend-stable {
+            color: #666;
+        }
+
+        .violations {
+            margin-top: 1rem;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .violation {
+            font-size: 0.85rem;
+            color: #666;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        .violation:last-child {
+            border-bottom: none;
+        }
+
+        /* Map */
+        .map-container {
+            height: 400px;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+        }
+
+        .map-legend {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 0.25rem 0;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+        }
+
+        .color-high {
+            background: #dc2626;
+        }
+
+        .color-medium {
+            background: #f59e0b;
+        }
+
+        .color-low {
+            background: #16a34a;
+        }
+
+        /* Loading */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .loading.hidden {
+            display: none;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 2rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .main {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+
+            .map-container {
+                height: 300px;
+            }
+
+            .search-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <header class="header">
+            <h1>Restaurant Health Inspector</h1>
+            <p>Search restaurants and view health inspection data</p>
+        </header>
+
+        <div class="search">
+            <input type="text" id="searchInput" class="search-input" placeholder="Search restaurants..." />
+            <div class="search-results" id="searchResults"></div>
+        </div>
+
+        <div class="main" id="mainContent" style="display: none;">
+            <div class="card">
+                <div class="card-header">
+                    <h2>
+                        Health Inspection
+                        <span class="badge" id="gradeBadge">N/A</span>
+                    </h2>
+                </div>
+                <div class="card-content">
+                    <div class="metric">
+                        <span class="metric-label">Latest Score</span>
+                        <span class="metric-value" id="latestScore">--</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Inspection Date</span>
+                        <span class="metric-value" id="inspectionDate">--</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Critical Violations</span>
+                        <span class="metric-value" id="criticalViolations">--</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">High Severity</span>
+                        <span class="metric-value" id="highSeverity">--</span>
+                    </div>
+                    <div class="violations" id="violations">
+                        <div class="empty-state">Select a restaurant to view violations</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>
+                        Rat Activity
+                        <span class="badge" id="ratStatusBadge">INACTIVE</span>
+                    </h2>
+                </div>
+                <div class="card-content">
+                    <div class="metric">
+                        <span class="metric-label">Activity Rate (6mo)</span>
+                        <span class="metric-value" id="ratActivityRate">--</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Pass Rate (6mo)</span>
+                        <span class="metric-value" id="ratPassRate">--</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Total Inspections</span>
+                        <span class="metric-value" id="ratInspections">--</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Last Inspection</span>
+                        <span class="metric-value" id="lastRatInspection">--</span>
+                    </div>
+                    <div class="trend" id="ratTrend">
+                        <span class="trend-stable">No trend data</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map" style="height: 100%;"></div>
+            <div class="map-legend">
+                <div class="legend-item">
+                    <div class="legend-color color-high"></div>
+                    High Activity
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color color-medium"></div>
+                    Medium Activity
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color color-low"></div>
+                    Low Activity
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        class RestaurantDashboard {
+            constructor() {
+                this.map = null;
+                this.restaurants = [];
+                this.selectedRestaurant = null;
+                this.markers = [];
+                this.apiUrl = 'http://localhost:8000';
+
+                this.init();
+            }
+
+            async init() {
+                this.showLoading(true);
+                this.initMap();
+                await this.loadData();
+                this.setupSearch();
+                this.showLoading(false);
+            }
+
+            initMap() {
+                this.map = L.map('map').setView([40.7128, -74.0060], 11);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap'
+                }).addTo(this.map);
+            }
+
+            async loadData() {
+                try {
+                    const response = await fetch(`${this.apiUrl}/data/main_mart.fact_restaurant_rat?limit=2000`);
+                    if (!response.ok) throw new Error('Failed to fetch');
+
+                    const data = await response.json();
+                    this.restaurants = data.data || [];
+                    this.updateMap();
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+            }
+
+            updateMap() {
+                this.markers.forEach(marker => this.map.removeLayer(marker));
+                this.markers = [];
+
+                const zipcodes = new Map();
+
+                this.restaurants.forEach(r => {
+                    if (!r.zipcode || !r.latitude || !r.longitude) return;
+
+                    if (!zipcodes.has(r.zipcode)) {
+                        zipcodes.set(r.zipcode, {
+                            restaurants: [],
+                            totalActivity: 0,
+                            count: 0
+                        });
+                    }
+
+                    const zip = zipcodes.get(r.zipcode);
+                    zip.restaurants.push(r);
+                    zip.totalActivity += r.zip_rat_activity_rate_6m || 0;
+                    zip.count++;
+                });
+
+                zipcodes.forEach((data, zipcode) => {
+                    const avgActivity = data.totalActivity / data.count;
+                    const color = this.getActivityColor(avgActivity);
+
+                    data.restaurants.forEach(r => {
+                        const marker = L.circleMarker([r.latitude, r.longitude], {
+                            radius: 5,
+                            fillColor: color,
+                            color: 'white',
+                            weight: 1,
+                            fillOpacity: 0.8
+                        }).bindPopup(`
+                            <strong>ZIP ${zipcode}</strong><br>
+                            Restaurants: ${data.count}<br>
+                            Avg Activity: ${(avgActivity * 100).toFixed(1)}%
+                        `);
+
+                        marker.addTo(this.map);
+                        this.markers.push(marker);
+                    });
+                });
+            }
+
+            getActivityColor(rate) {
+                if (rate >= 0.7) return '#dc2626';
+                if (rate >= 0.3) return '#f59e0b';
+                return '#16a34a';
+            }
+
+            setupSearch() {
+                const input = document.getElementById('searchInput');
+                const results = document.getElementById('searchResults');
+                let timeout;
+
+                input.addEventListener('input', (e) => {
+                    clearTimeout(timeout);
+                    const query = e.target.value.trim();
+
+                    if (query.length < 2) {
+                        results.style.display = 'none';
+                        return;
+                    }
+
+                    timeout = setTimeout(() => this.search(query), 300);
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!e.target.closest('.search')) {
+                        results.style.display = 'none';
+                    }
+                });
+            }
+
+            search(query) {
+                const results = this.restaurants
+                    .filter(r => r.dba && r.dba.toLowerCase().includes(query.toLowerCase()))
+                    .slice(0, 8);
+
+                const container = document.getElementById('searchResults');
+
+                if (results.length === 0) {
+                    container.innerHTML = '<div class="search-item">No results found</div>';
+                } else {
+                    container.innerHTML = results.map(r => {
+                        const score = r.avg_score_6m || 0;
+                        const scoreClass = score >= 85 ? 'score-good' : score >= 70 ? 'score-fair' : 'score-poor';
+
+                        return `
+                            <div class="search-item" data-camis="${r.camis}">
+                                <div class="search-info">
+                                    <h3>${r.dba}</h3>
+                                    <p>${r.street}, ${r.boro}</p>
+                                </div>
+                                <div class="search-score ${scoreClass}">
+                                    ${score > 0 ? score.toFixed(0) : 'N/A'}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    container.querySelectorAll('.search-item[data-camis]').forEach(item => {
+                        item.onclick = () => {
+                            const camis = item.dataset.camis;
+                            const restaurant = this.restaurants.find(r => r.camis == camis);
+                            if (restaurant) {
+                                this.selectRestaurant(restaurant);
+                                container.style.display = 'none';
+                                document.getElementById('searchInput').value = restaurant.dba;
+                            }
+                        };
+                    });
+                }
+
+                container.style.display = 'block';
+            }
+
+            async selectRestaurant(restaurant) {
+                this.selectedRestaurant = restaurant;
+                this.showLoading(true);
+
+                try {
+                    await this.loadRestaurantDetails(restaurant);
+                    this.showDetails();
+                    this.highlightRestaurant();
+                } catch (error) {
+                    console.error('Error:', error);
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            async loadRestaurantDetails(restaurant) {
+                try {
+                    const [inspectionRes, ratRes] = await Promise.all([
+                        fetch(`${this.apiUrl}/query`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                query: `SELECT * FROM main_mart.fact_restaurant_inspection WHERE camis = '${restaurant.camis}' ORDER BY inspection_date DESC LIMIT 1`
+                            })
+                        }),
+                        fetch(`${this.apiUrl}/query`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                query: `SELECT * FROM main_mart.fact_restaurant_rat WHERE camis = '${restaurant.camis}' LIMIT 1`
+                            })
+                        })
+                    ]);
+
+                    this.inspection = inspectionRes.ok ? (await inspectionRes.json()).data[0] : null;
+                    this.ratData = ratRes.ok ? (await ratRes.json()).data[0] : null;
+                } catch (error) {
+                    this.inspection = null;
+                    this.ratData = null;
+                }
+            }
+
+            showDetails() {
+                document.getElementById('mainContent').style.display = 'grid';
+
+                // Health inspection
+                const inspection = this.inspection;
+                if (inspection) {
+                    document.getElementById('latestScore').textContent = inspection.average_score || 'N/A';
+                    document.getElementById('inspectionDate').textContent = inspection.inspection_date || 'N/A';
+                    document.getElementById('criticalViolations').textContent = inspection.critical_violations || 0;
+                    document.getElementById('highSeverity').textContent = inspection.high_severity_violation_count || 0;
+
+                    const grade = inspection.grade || 'N';
+                    const gradeBadge = document.getElementById('gradeeBadge');
+                    gradeBadge.textContent = grade;
+                    gradeBadge.className = `badge badge-${grade.toLowerCase()}`;
+
+                    const violations = document.getElementById('violations');
+                    if (inspection.violation_descriptions?.length) {
+                        violations.innerHTML = inspection.violation_descriptions
+                            .map(v => `<div class="violation">${v}</div>`)
+                            .join('');
+                    } else {
+                        violations.innerHTML = '<div class="empty-state">No violations recorded</div>';
+                    }
+                } else {
+                    this.resetInspectionData();
+                }
+
+                // Rat activity
+                const rat = this.ratData;
+                if (rat) {
+                    const activityRate = rat.rat_activity_rate_6m || 0;
+                    const passRate = rat.rat_pass_rate_6m || 0;
+
+                    document.getElementById('ratActivityRate').textContent = `${(activityRate * 100).toFixed(1)}%`;
+                    document.getElementById('ratPassRate').textContent = `${(passRate * 100).toFixed(1)}%`;
+                    document.getElementById('ratInspections').textContent = rat.total_rat_inspections_6m || 'N/A';
+                    document.getElementById('lastRatInspection').textContent = rat.recent_rat_insp_date || 'N/A';
+
+                    const statusBadge = document.getElementById('ratStatusBadge');
+                    if (activityRate >= 0.5) {
+                        statusBadge.textContent = 'ACTIVE';
+                        statusBadge.className = 'badge badge-active';
+                    } else {
+                        statusBadge.textContent = 'INACTIVE';
+                        statusBadge.className = 'badge badge-inactive';
+                    }
+
+                    const trend = rat.rat_activity_trend_6m;
+                    const trendEl = document.getElementById('ratTrend');
+                    if (trend > 0.1) {
+                        trendEl.innerHTML = `<span class="trend-up">↗ Activity increasing (${(trend * 100).toFixed(1)}%)</span>`;
+                    } else if (trend < -0.1) {
+                        trendEl.innerHTML = `<span class="trend-down">↘ Activity decreasing (${Math.abs(trend * 100).toFixed(1)}%)</span>`;
+                    } else {
+                        trendEl.innerHTML = `<span class="trend-stable">→ Activity stable</span>`;
+                    }
+                } else {
+                    this.resetRatData();
+                }
+            }
+
+            resetInspectionData() {
+                ['latestScore', 'inspectionDate', 'criticalViolations', 'highSeverity'].forEach(id => {
+                    document.getElementById(id).textContent = 'N/A';
+                });
+                document.getElementById('gradeeBadge').textContent = 'N/A';
+                document.getElementById('violations').innerHTML = '<div class="empty-state">No inspection data</div>';
+            }
+
+            resetRatData() {
+                ['ratActivityRate', 'ratPassRate', 'ratInspections', 'lastRatInspection'].forEach(id => {
+                    document.getElementById(id).textContent = 'N/A';
+                });
+                document.getElementById('ratStatusBadge').textContent = 'INACTIVE';
+                document.getElementById('ratTrend').innerHTML = '<span class="trend-stable">No data</span>';
+            }
+
+            highlightRestaurant() {
+                if (!this.selectedRestaurant?.latitude || !this.selectedRestaurant?.longitude) return;
+
+                const marker = L.circleMarker([this.selectedRestaurant.latitude, this.selectedRestaurant.longitude], {
+                    radius: 8,
+                    fillColor: '#2563eb',
+                    color: 'white',
+                    weight: 2,
+                    fillOpacity: 1
+                });
+
+                marker.addTo(this.map);
+                this.markers.push(marker);
+                this.map.setView([this.selectedRestaurant.latitude, this.selectedRestaurant.longitude], 15);
+            }
+
+            showLoading(show) {
+                document.getElementById('loading').classList.toggle('hidden', !show);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            new RestaurantDashboard();
+        });
+    </script>
+</body>
+
+</html>
