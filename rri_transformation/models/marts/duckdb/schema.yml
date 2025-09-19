@@ -1,0 +1,118 @@
+# /Users/sridhar/Dev/rat-risk-inspector/rri_transformation/models/marts/schema.yml
+version: 2
+
+models:
+  - name: mart_restaurant_inspection
+    description: "Final restaurant inspection data for business use"
+    columns:
+      - name: camis
+        description: "Restaurant identifier"
+        tests:
+          - not_null
+      - name: inspection_date
+        description: "Date of inspection"
+        tests:
+          - not_null
+      - name: computed_score
+        description: "Computed inspection score"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+      - name: computed_grade
+        description: "Computed restaurant grade"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['A', 'B', 'C', 'N']
+      - name: boro
+        description: "Borough code"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['BRONX', 'BROOKLYN', 'MANHATTAN', 'QUEENS', 'STATEN ISLAND']
+      - name: bin
+        description: "Building identifier"
+        tests:
+          - not_null
+      - name: zipcode
+        description: "ZIP code"
+        tests:
+          - not_null
+
+  - name: mart_rat_inspection
+    description: "Final rat inspection data for business use"
+    columns:
+      - name: bin
+        description: "Building identifier"
+        tests:
+          - not_null
+      - name: inspection_date
+        description: "Date of inspection"
+        tests:
+          - not_null
+      - name: result
+        description: "Inspection result"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['PASSED', 'FAILED', 'FAILED FOR OTHER R', 'RAT ACTIVITY']
+      - name: inspection_type
+        description: "Type of inspection"
+        tests:
+          - not_null
+      - name: borough
+        description: "Borough name"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['BRONX', 'BROOKLYN', 'MANHATTAN', 'QUEENS', 'STATEN ISLAND']
+      - name: latitude
+        description: "Latitude coordinate"
+        tests:
+          - not_null
+      - name: longitude
+        description: "Longitude coordinate"
+        tests:
+          - not_null
+
+  - name: mart_rat_risk_model
+    description: "Final risk model combining restaurant and rat data"
+    tests:
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          min_value: 100
+          max_value: 100000
+    columns:
+      - name: rat_risk_score
+        description: "Combined risk score (0-100)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+      - name: risk_category
+        description: "Risk category classification"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['LOW RISK', 'MODERATE RISK', 'HIGH RISK', 'VERY HIGH RISK']
+      - name: camis
+        description: "Restaurant identifier"
+        tests:
+          - not_null
+          - unique
+      - name: bin
+        description: "Building identifier"
+        tests:
+          - not_null
+      - name: dba
+        description: "Restaurant name"
+        tests:
+          - not_null
+      - name: boro
+        description: "Borough code"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['BRONX', 'BROOKLYN', 'MANHATTAN', 'QUEENS', 'STATEN ISLAND']

@@ -1,0 +1,65 @@
+version: 2
+
+sources:
+  - name: raw
+    database: MY_WH
+    schema: raw
+    description: "Raw data from NYC Open Data APIs"
+    tables:
+      - name: restaurant_inspection
+        description: "Raw restaurant inspection data from NYC Open Data"
+        columns:
+          - name: camis
+            description: "Restaurant identifier (CAMIS)"
+            tests:
+              - not_null
+          - name: inspection_date
+            description: "Date of inspection"
+            tests:
+              - not_null
+          - name: score
+            description: "Inspection score (0-100)"
+            tests:
+              - not_null
+          - name: boro
+            description: "Borough code"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['BRONX', 'BROOKLYN', 'MANHATTAN', 'QUEENS', 'STATEN ISLAND']
+          - name: grade
+            description: "Restaurant grade"
+            tests:
+              - accepted_values:
+                  values: ['A', 'B', 'C', 'P', 'Z', 'N']
+        freshness:
+          warn_after: {count: 1, period: day}
+          error_after: {count: 3, period: day}
+        loaded_at_field: extract_date
+
+      - name: rat_inspection
+        description: "Raw rat inspection data from NYC Open Data"
+        columns:
+          - name: bin
+            description: "Building identifier (BIN)"
+            tests:
+              - not_null
+          - name: inspection_date
+            description: "Date of inspection"
+            tests:
+              - not_null
+          - name: result
+            description: "Inspection result"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['PASSED', 'FAILED', 'FAILED FOR OTHER R', 'RAT ACTIVITY']
+        freshness:
+          warn_after: {count: 1, period: day}
+          error_after: {count: 3, period: day}
+        loaded_at_field: extract_date
+
+
+  
+ 
+
