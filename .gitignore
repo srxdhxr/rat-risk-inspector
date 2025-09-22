@@ -16,5 +16,4 @@ Thumbs.db
 .vscode/
 .idea/
 
-rat_inspection/data/
-restaurant_inspection/data/
+data/
